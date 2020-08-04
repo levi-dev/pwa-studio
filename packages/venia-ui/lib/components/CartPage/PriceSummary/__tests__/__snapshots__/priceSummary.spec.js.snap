@@ -1,6 +1,6 @@
 // Jest Snapshot v1, https://goo.gl/fbAQLP
 
-exports[`renders PriceSummary correctly 1`] = `
+exports[`renders PriceSummary correctly on cart page 1`] = `
 <div
   className="root"
 >
@@ -16,44 +16,7 @@ exports[`renders PriceSummary correctly 1`] = `
       className="price"
     >
       <span>
-        $11
-      </span>
-    </span>
-    <span
-      className="lineItemLabel"
-    >
-      Discounts applied
-    </span>
-    <span
-      className="price"
-    >
-      -
-      <span>
-        $1
-      </span>
-    </span>
-    <span
-      className="lineItemLabel"
-    >
-      Estimated Tax
-    </span>
-    <span
-      className="price"
-    >
-      <span>
-        $0
-      </span>
-    </span>
-    <span
-      className="lineItemLabel"
-    >
-      Estimated Shipping
-    </span>
-    <span
-      className="price"
-    >
-      <span>
-        FREE
+        $3.5
       </span>
     </span>
     <span
@@ -65,7 +28,7 @@ exports[`renders PriceSummary correctly 1`] = `
       className="totalPrice"
     >
       <span>
-        $10
+        $8.5
       </span>
     </span>
   </div>
@@ -74,7 +37,6 @@ exports[`renders PriceSummary correctly 1`] = `
   >
     <button
       className="root_highPriority"
-      onClick={[Function]}
       type="button"
     >
       <span
@@ -87,11 +49,46 @@ exports[`renders PriceSummary correctly 1`] = `
 </div>
 `;
 
+exports[`renders PriceSummary correctly on checkout page 1`] = `
+<div
+  className="root"
+>
+  <div
+    className="lineItems"
+  >
+    <span
+      className="lineItemLabel"
+    >
+      Subtotal
+    </span>
+    <span
+      className="price"
+    >
+      <span>
+        $3.5
+      </span>
+    </span>
+    <span
+      className="totalLabel"
+    >
+      Total
+    </span>
+    <span
+      className="totalPrice"
+    >
+      <span>
+        $8.5
+      </span>
+    </span>
+  </div>
+</div>
+`;
+
 exports[`renders an error state if query fails 1`] = `
 <div
   className="root"
 >
-  An error occurred. Please refresh the page.
+  Something went wrong. Please refresh and try again.
 </div>
 `;
 

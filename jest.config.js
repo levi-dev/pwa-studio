@@ -6,17 +6,6 @@
  */
 const path = require('path');
 
-let worker;
-try {
-    worker = require('worker_threads');
-} catch (e) {
-    console.log(
-        'Experimental worker flag missing, skipping execution of ServiceWorker tests.'
-    );
-}
-
-const MessageChannel = worker ? worker.MessageChannel : {};
-
 /**
  * `configureProject()` makes a config object for use in the `projects` array.
  *
@@ -53,7 +42,6 @@ const testGlob = '/**/{src,lib,_buildpack}/**/__tests__/*.(test|spec).js';
 // Reusable test configuration for Venia UI and storefront packages.
 const testReactComponents = inPackage => ({
     // Expose jsdom to tests.
-    browser: true,
     moduleNameMapper: {
         // Mock binary files to avoid excess RAM usage.
         '\\.(jpg|jpeg|png)$':
@@ -63,7 +51,9 @@ const testReactComponents = inPackage => ({
         // This mapping forces CSS Modules to return literal identies,
         // so e.g. `classes.root` is always `"root"`.
         '\\.css$': 'identity-obj-proxy',
-        '\\.svg$': 'identity-obj-proxy'
+        '\\.svg$': 'identity-obj-proxy',
+        '@magento/venia-drivers':
+            '<rootDir>/packages/venia-ui/lib/drivers/index.js'
     },
     moduleFileExtensions: ['ee.js', 'ce.js', 'js', 'json', 'jsx', 'node'],
     // Reproduce the Webpack resolution config that lets Venia import
@@ -84,7 +74,7 @@ const testReactComponents = inPackage => ({
         // import `.graphql` files into JS.
         '\\.(gql|graphql)$': 'jest-transform-graphql',
         // Use the default babel-jest for everything else.
-        '\\.(js|css)$': 'babel-jest'
+        '\\.(jsx?|css)$': 'babel-jest'
     },
     // Normally babel-jest ignores node_modules and only transpiles the current
     // package's source. The below setting forces babel-jest to transpile
@@ -199,8 +189,7 @@ const testReactComponents = inPackage => ({
                 ]
             }
         },
-        STORE_NAME: 'Venia',
-        MessageChannel
+        STORE_NAME: 'Venia'
     }
 });
 
@@ -268,7 +257,6 @@ const jestConfig = {
         configureProject('pagebuilder', 'Pagebuilder', testReactComponents),
         configureProject('peregrine', 'Peregrine', inPackage => ({
             // Expose jsdom to tests.
-            browser: true,
             setupFiles: [
                 // Shim DOM properties not supported by jsdom
                 inPackage('scripts/shim.js'),
@@ -295,7 +283,12 @@ const jestConfig = {
         configureProject('venia-concept', 'Venia Storefront', inPackage =>
             testReactComponents(inPackage)
         ),
-        configureProject('venia-ui', 'Venia UI', testReactComponents),
+        configureProject('venia-ui', 'Venia UI', inPackage => ({
+            ...testReactComponents(inPackage),
+            setupFiles: [
+                path.join('<rootDir>', 'scripts', 'jest-backend-setup.js')
+            ]
+        })),
         // Test any root CI scripts as well, to ensure stable CI behavior.
         configureProject('scripts', 'CI Scripts', () => ({
             testEnvironment: 'node',
@@ -325,6 +318,7 @@ const jestConfig = {
         // Not node_modules
         '!**/node_modules/**',
         // Not __tests__, __helpers__, or __any_double_underscore_folders__
+        '!**/TestHelpers/**',
         '!**/__[[:alpha:]]*__/**',
         '!**/.*/__[[:alpha:]]*__/**',
         // Not this file itself

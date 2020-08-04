@@ -1,9 +1,10 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 
 import { useCartPage } from '@magento/peregrine/lib/talons/CartPage/useCartPage';
 
 import { Title } from '../../components/Head';
 import Button from '../Button';
+import { fullPageLoadingIndicator } from '../LoadingIndicator';
 
 import PriceAdjustments from './PriceAdjustments';
 import PriceSummary from './PriceSummary';
@@ -24,22 +25,25 @@ const CartPage = props => {
         hasItems,
         isSignedIn,
         isCartUpdating,
-        setIsCartUpdating
+        setIsCartUpdating,
+        shouldShowLoadingIndicator
     } = talonProps;
 
     const classes = mergeClasses(defaultClasses, props.classes);
 
-    const signInDisplay = useMemo(() => {
-        return !isSignedIn ? (
-            <Button
-                className={classes.sign_in}
-                onClick={handleSignIn}
-                priority="high"
-            >
-                {'Sign In'}
-            </Button>
-        ) : null;
-    }, [classes.sign_in, handleSignIn, isSignedIn]);
+    if (shouldShowLoadingIndicator) {
+        return fullPageLoadingIndicator;
+    }
+
+    const signInDisplay = !isSignedIn ? (
+        <Button
+            className={classes.sign_in}
+            onClick={handleSignIn}
+            priority="high"
+        >
+            {'Sign In'}
+        </Button>
+    ) : null;
 
     const productListing = hasItems ? (
         <ProductListing setIsCartUpdating={setIsCartUpdating} />
@@ -51,7 +55,7 @@ const CartPage = props => {
         <PriceAdjustments setIsCartUpdating={setIsCartUpdating} />
     ) : null;
     const priceSummary = hasItems ? (
-        <PriceSummary isCartUpdating={isCartUpdating} />
+        <PriceSummary isUpdating={isCartUpdating} />
     ) : null;
 
     return (
@@ -70,11 +74,6 @@ const CartPage = props => {
                     <div className={classes.summary_contents}>
                         {priceSummary}
                     </div>
-                </div>
-                <div className={classes.recently_viewed_container}>
-                    <a href="https://jira.corp.magento.com/browse/PWA-270">
-                        Recently Viewed to be completed by PWA-270.
-                    </a>
                 </div>
             </div>
         </div>

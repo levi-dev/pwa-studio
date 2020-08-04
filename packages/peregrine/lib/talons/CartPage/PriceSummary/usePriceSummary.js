@@ -1,5 +1,6 @@
-import { useCallback, useEffect } from 'react';
-import { useLazyQuery } from '@apollo/react-hooks';
+import { useEffect, useCallback } from 'react';
+import { useHistory, useRouteMatch } from 'react-router-dom';
+import { useQuery } from '@apollo/react-hooks';
 import { useCartContext } from '@magento/peregrine/lib/context/cart';
 
 /**
@@ -27,24 +28,17 @@ export const usePriceSummary = props => {
     } = props;
 
     const [{ cartId }] = useCartContext();
+    const history = useHistory();
+    // We don't want to display "Estimated" or the "Proceed" button in checkout.
+    const match = useRouteMatch('/checkout');
+    const isCheckout = !!match;
 
-    const [fetchPriceSummary, { error, loading, data }] = useLazyQuery(
-        getPriceSummary
-    );
-
-    useEffect(() => {
-        if (cartId) {
-            fetchPriceSummary({
-                variables: {
-                    cartId
-                }
-            });
+    const { error, loading, data } = useQuery(getPriceSummary, {
+        skip: !cartId,
+        variables: {
+            cartId
         }
-    }, [cartId, fetchPriceSummary]);
-
-    const handleProceedToCheckout = useCallback(() => {
-        // TODO: Navigate to checkout view
-    }, []);
+    });
 
     useEffect(() => {
         if (error) {
@@ -52,10 +46,15 @@ export const usePriceSummary = props => {
         }
     }, [error]);
 
+    const handleProceedToCheckout = useCallback(() => {
+        history.push('/checkout');
+    }, [history]);
+
     return {
         handleProceedToCheckout,
         hasError: !!error,
         hasItems: data && !!data.cart.items.length,
+        isCheckout,
         isLoading: !!loading,
         flatData: flattenData(data)
     };

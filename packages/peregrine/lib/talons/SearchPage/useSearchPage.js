@@ -3,7 +3,7 @@ import { useLazyQuery, useQuery } from '@apollo/react-hooks';
 import { useLocation } from 'react-router-dom';
 
 import { useAppContext } from '@magento/peregrine/lib/context/app';
-import { usePagination } from '@magento/peregrine';
+import { usePagination, useSort } from '@magento/peregrine';
 
 import { getSearchParam } from '../../hooks/useSearchParam';
 import { getFiltersFromSearch, getFilterInput } from '../FilterModal/helpers';
@@ -23,6 +23,14 @@ export const useSearchPage = props => {
             productSearch
         }
     } = props;
+
+    const sortProps = useSort();
+
+    const [currentSort] = sortProps;
+    const { sortAttribute, sortDirection } = currentSort;
+
+    // Keep track of the sort criteria so we can tell when they change.
+    const previousSort = useRef(currentSort);
 
     // Set up pagination.
     const [paginationValues, paginationApi] = usePagination();
@@ -113,7 +121,8 @@ export const useSearchPage = props => {
                 currentPage: Number(currentPage),
                 filters: newFilters,
                 inputText,
-                pageSize: Number(PAGE_SIZE)
+                pageSize: Number(PAGE_SIZE),
+                sort: { [sortAttribute]: sortDirection }
             }
         });
 
@@ -122,7 +131,15 @@ export const useSearchPage = props => {
             top: 0,
             behavior: 'smooth'
         });
-    }, [currentPage, filterTypeMap, inputText, runQuery, search]);
+    }, [
+        currentPage,
+        filterTypeMap,
+        inputText,
+        runQuery,
+        search,
+        sortDirection,
+        sortAttribute
+    ]);
 
     // Set the total number of pages whenever the data changes.
     useEffect(() => {
@@ -137,8 +154,8 @@ export const useSearchPage = props => {
         };
     }, [data, setTotalPages]);
 
-    // Reset the current page back to one (1) when the search string or filters
-    // change.
+    // Reset the current page back to one (1) when the search string, filters
+    // or sort criteria change.
     useEffect(() => {
         // We don't want to compare page value.
         const prevSearch = new URLSearchParams(previousSearch.current);
@@ -146,13 +163,20 @@ export const useSearchPage = props => {
         prevSearch.delete('page');
         nextSearch.delete('page');
 
-        if (prevSearch.toString() != nextSearch.toString()) {
+        if (
+            prevSearch.toString() !== nextSearch.toString() ||
+            previousSort.current.sortAttribute.toString() !==
+                currentSort.sortAttribute.toString() ||
+            previousSort.current.sortDirection.toString() !==
+                currentSort.sortDirection.toString()
+        ) {
             // The search term changed.
             setCurrentPage(1);
             // And update the ref.
             previousSearch.current = search;
+            previousSort.current = currentSort;
         }
-    }, [search, setCurrentPage]);
+    }, [currentSort, search, setCurrentPage]);
 
     // Fetch category filters for when a user is searching in a category.
     const [getFilters, { data: filterData, error: filterError }] = useLazyQuery(
@@ -191,6 +215,7 @@ export const useSearchPage = props => {
         filters,
         loading,
         openDrawer,
-        pageControl
+        pageControl,
+        sortProps
     };
 };

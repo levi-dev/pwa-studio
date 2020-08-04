@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { useLazyQuery } from '@apollo/react-hooks';
+import { useQuery } from '@apollo/react-hooks';
 
 import { useCartContext } from '../../../../context/cart';
 
@@ -8,25 +8,16 @@ export const useShippingMethods = props => {
         queries: { getShippingMethodsQuery }
     } = props;
     const [{ cartId }] = useCartContext();
-    const [fetchShippingMethods, { data }] = useLazyQuery(
-        getShippingMethodsQuery,
-        {
-            fetchPolicy: 'cache-and-network'
+    const { data } = useQuery(getShippingMethodsQuery, {
+        fetchPolicy: 'cache-and-network',
+        skip: !cartId,
+        variables: {
+            cartId
         }
-    );
+    });
 
     const [isShowingForm, setIsShowingForm] = useState(false);
     const showForm = useCallback(() => setIsShowingForm(true), []);
-
-    useEffect(() => {
-        if (cartId) {
-            fetchShippingMethods({
-                variables: {
-                    cartId
-                }
-            });
-        }
-    }, [cartId, fetchShippingMethods]);
 
     useEffect(() => {
         if (data && data.cart.shipping_addresses.length) {
@@ -38,7 +29,7 @@ export const useShippingMethods = props => {
     let selectedShippingMethod = null;
     let selectedShippingFields = {
         country: 'US',
-        state: '',
+        region: '',
         zip: ''
     };
     if (data) {
@@ -56,7 +47,7 @@ export const useShippingMethods = props => {
 
             selectedShippingFields = {
                 country: country.code,
-                state: region.code,
+                region: region.code,
                 zip: postcode
             };
 

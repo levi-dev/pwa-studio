@@ -1,8 +1,12 @@
 import { useCallback, useMemo, useState } from 'react';
-import { useMutation } from '@apollo/react-hooks';
-import { useUserContext } from '@magento/peregrine/lib/context/user';
-import { useCartContext } from '@magento/peregrine/lib/context/cart';
-import { useAwaitQuery } from '@magento/peregrine/lib/hooks/useAwaitQuery';
+import { useApolloClient, useMutation } from '@apollo/react-hooks';
+
+import { useUserContext } from '../../../lib/context/user';
+import { useCartContext } from '../../../lib/context/cart';
+import { useAwaitQuery } from '../../../lib/hooks/useAwaitQuery';
+import { clearCartDataFromCache } from '../../Apollo/clearCartDataFromCache';
+import { clearCustomerDataFromCache } from '../../Apollo/clearCustomerDataFromCache';
+import { retrieveCartId } from '../../store/actions/cart';
 
 /**
  * Returns props necessary to render CreateAccount component. In particular this
@@ -23,23 +27,25 @@ import { useAwaitQuery } from '@magento/peregrine/lib/hooks/useAwaitQuery';
  */
 export const useCreateAccount = props => {
     const {
-        createAccountQuery,
-        createCartMutation,
-        customerQuery,
-        getCartDetailsQuery,
+        queries: { createAccountQuery, customerQuery, getCartDetailsQuery },
+        mutations: { createCartMutation, signInMutation, mergeCartsMutation },
         initialValues = {},
-        onSubmit,
-        signInMutation
+        onSubmit
     } = props;
-
+    const apolloClient = useApolloClient();
     const [isSubmitting, setIsSubmitting] = useState(false);
-    const [, { createCart, getCartDetails, removeCart }] = useCartContext();
+    const [
+        { cartId },
+        { createCart, removeCart, getCartDetails }
+    ] = useCartContext();
     const [
         { isGettingDetails, isSignedIn },
         { getUserDetails, setToken }
     ] = useUserContext();
 
     const [fetchCartId] = useMutation(createCartMutation);
+
+    const [mergeCarts] = useMutation(mergeCartsMutation);
 
     // For create account and sign in mutations, we don't want to cache any
     // personally identifiable information (PII). So we set fetchPolicy to 'no-cache'.
@@ -68,63 +74,80 @@ export const useCreateAccount = props => {
         async formValues => {
             setIsSubmitting(true);
             try {
-                // Try to create an account with the mutation.
+                // Get source cart id (guest cart id).
+                const sourceCartId = cartId;
+
+                // Create the account and then sign in.
                 await createAccount({
                     variables: {
                         email: formValues.customer.email,
                         firstname: formValues.customer.firstname,
                         lastname: formValues.customer.lastname,
-                        password: formValues.password
+                        password: formValues.password,
+                        is_subscribed: !!formValues.subscribe
                     }
                 });
-
-                // Sign in and save the token
-                const response = await signIn({
+                const signInResponse = await signIn({
                     variables: {
                         email: formValues.customer.email,
                         password: formValues.password
                     }
                 });
-
-                const token =
-                    response && response.data.generateCustomerToken.token;
-
+                const token = signInResponse.data.generateCustomerToken.token;
                 await setToken(token);
 
-                await getUserDetails({ fetchUserDetails });
-
+                // Clear all cart/customer data from cache and redux.
+                await clearCartDataFromCache(apolloClient);
+                await clearCustomerDataFromCache(apolloClient);
                 await removeCart();
 
+                // Create and get the customer's cart id.
                 await createCart({
                     fetchCartId
                 });
+                const destinationCartId = await retrieveCartId();
 
+                // Merge the guest cart into the customer cart.
+                await mergeCarts({
+                    variables: {
+                        destinationCartId,
+                        sourceCartId
+                    }
+                });
+
+                // Ensure old stores are updated with any new data.
+                await getUserDetails({ fetchUserDetails });
                 await getCartDetails({
                     fetchCartId,
                     fetchCartDetails
                 });
 
                 // Finally, invoke the post-submission callback.
-                onSubmit();
+                if (onSubmit) {
+                    onSubmit();
+                }
             } catch (error) {
-                if (process.env.NODE_ENV === 'development') {
+                if (process.env.NODE_ENV !== 'production') {
                     console.error(error);
                 }
                 setIsSubmitting(false);
             }
         },
         [
+            cartId,
+            apolloClient,
+            removeCart,
             createAccount,
+            signIn,
+            setToken,
             createCart,
-            fetchCartDetails,
             fetchCartId,
+            mergeCarts,
+            getUserDetails,
             fetchUserDetails,
             getCartDetails,
-            getUserDetails,
-            onSubmit,
-            removeCart,
-            setToken,
-            signIn
+            fetchCartDetails,
+            onSubmit
         ]
     );
 

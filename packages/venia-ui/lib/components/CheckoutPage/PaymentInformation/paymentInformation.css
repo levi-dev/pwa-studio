@@ -1,18 +1,31 @@
-.text_content {
-    padding: 1rem 0rem;
-    padding-top: 2rem;
-    font-weight: bold;
+.root {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 2rem;
 }
 
-.container {
-    min-height: 10rem;
+.payment_info_container {
     border: 1px solid rgb(var(--venia-border));
     border-radius: 5px;
-    padding: 1.5rem 1rem;
 }
 
-.heading {
-    line-height: 1.25em;
-    border-bottom: 1px solid rgb(var(--venia-border));
-    padding-bottom: 2rem;
+.loading {
+    composes: root from '../../LoadingIndicator/indicator.css';
+    text-align: center;
+}
+
+/*
+ * Mobile-specific styles.
+ */
+
+@media (max-width: 960px) {
+    .container {
+        gap: 1rem;
+    }
+}
+
+@media (max-width: 960px) {
+    .heading {
+        border-width: 0;
+    }
 }
